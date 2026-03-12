@@ -9,7 +9,11 @@
   },
   "dependencies": {
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "opnet": "latest",
+    "@btc-vision/walletconnect": "latest",
+    "@btc-vision/transaction": "latest",
+    "@btc-vision/bitcoin": "latest"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",
