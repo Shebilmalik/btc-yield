@@ -203,10 +203,18 @@ export function useYield() {
       const amountHex = amountSats.toString(16).padStart(64, '0')
 
       const result = await wallet.signAndBroadcastTransaction?.({
-        to: contractAddress,
-        data: SELECTORS.deposit + vaultIdHex + amountHex,
-        value: amountSats.toString(),
-      }) ?? await wallet.sendTransaction?.({
+  to: contractAddress,
+  calldata: SELECTORS.deposit + vaultIdHex + amountHex,
+  sats: Number(amountSats),
+}) ?? await wallet.sendOpNetTransaction?.({
+  to: contractAddress,
+  calldata: SELECTORS.deposit + vaultIdHex + amountHex,
+  sats: Number(amountSats),
+}) ?? await wallet.sendTransaction?.({
+  to: contractAddress,
+  data: SELECTORS.deposit + vaultIdHex + amountHex,
+  value: amountSats.toString(),
+})
         to: contractAddress,
         data: SELECTORS.deposit + vaultIdHex + amountHex,
         value: amountSats.toString(),
