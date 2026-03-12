@@ -44,26 +44,51 @@ export function useYield() {
     (window as any).unisat
 
   const sendTx = async (wallet: any, to: string, calldata: string, sats: number) => {
-    // OP_NET primary — signAndBroadcastInteraction
+    // OP_NET — try multiple parameter shapes for signAndBroadcastInteraction
     if (wallet.signAndBroadcastInteraction) {
+      // Try with feeRate and no value first (most common OP_NET pattern)
+      try {
+        return await wallet.signAndBroadcastInteraction(
+          to,
+          calldata,
+          BigInt(sats)
+        )
+      } catch (_) {}
+      // Try object form with sats as number
+      try {
+        return await wallet.signAndBroadcastInteraction({
+          to,
+          calldata,
+          sats,
+        })
+      } catch (_) {}
+      // Try object form with value as bigint
+      try {
+        return await wallet.signAndBroadcastInteraction({
+          to,
+          calldata,
+          value: BigInt(sats),
+        })
+      } catch (_) {}
+      // Try object form with value as number
       return await wallet.signAndBroadcastInteraction({
         to,
         calldata,
-        value: BigInt(sats),
+        value: sats,
       })
     }
-    // OP_NET fallbacks
+    if (wallet.signInteraction) {
+      const signed = await wallet.signInteraction({ to, calldata, value: sats })
+      if (wallet.broadcast) return await wallet.broadcast(signed)
+      if (wallet.pushTx) return await wallet.pushTx(signed)
+    }
     if (wallet.broadcast) return await wallet.broadcast({ to, calldata, value: sats })
     if (wallet.pushTx) return await wallet.pushTx({ to, calldata, value: sats })
     if (wallet.signAndBroadcastTransaction) return await wallet.signAndBroadcastTransaction({ to, calldata, sats })
     if (wallet.call) return await wallet.call({ to, calldata, value: sats })
     if (wallet.contractCall) return await wallet.contractCall({ to, calldata, value: sats })
-    if (wallet.sendOpNetTransaction) return await wallet.sendOpNetTransaction({ to, calldata, sats })
     if (wallet.sendTransaction) return await wallet.sendTransaction({ to, data: calldata, value: sats.toString() })
     if (wallet.send) return await wallet.send({ to, calldata, value: sats })
-    if (wallet.broadcastTransaction) return await wallet.broadcastTransaction({ to, calldata, value: sats })
-    if (wallet.signTransaction) return await wallet.signTransaction({ to, calldata, value: sats })
-    if (wallet.sendBitcoin) return await wallet.sendBitcoin(to, sats)
     throw new Error('Wallet methods: ' + Object.keys(wallet).join(', '))
   }
 
