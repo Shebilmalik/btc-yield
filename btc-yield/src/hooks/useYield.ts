@@ -44,52 +44,29 @@ export function useYield() {
     (window as any).unisat
 
   const sendTx = async (wallet: any, to: string, calldata: string, sats: number) => {
-    // OP_NET — try multiple parameter shapes for signAndBroadcastInteraction
     if (wallet.signAndBroadcastInteraction) {
-      // Try with feeRate and no value first (most common OP_NET pattern)
-      try {
-        return await wallet.signAndBroadcastInteraction(
-          to,
-          calldata,
-          BigInt(sats)
-        )
-      } catch (_) {}
-      // Try object form with sats as number
-      try {
-        return await wallet.signAndBroadcastInteraction({
-          to,
-          calldata,
-          sats,
-        })
-      } catch (_) {}
-      // Try object form with value as bigint
-      try {
-        return await wallet.signAndBroadcastInteraction({
-          to,
-          calldata,
-          value: BigInt(sats),
-        })
-      } catch (_) {}
-      // Try object form with value as number
       return await wallet.signAndBroadcastInteraction({
         to,
         calldata,
-        value: sats,
+        value: BigInt(sats),
       })
     }
     if (wallet.signInteraction) {
-      const signed = await wallet.signInteraction({ to, calldata, value: sats })
-      if (wallet.broadcast) return await wallet.broadcast(signed)
-      if (wallet.pushTx) return await wallet.pushTx(signed)
+      const signed = await wallet.signInteraction({
+        to,
+        calldata,
+        value: BigInt(sats),
+      })
+      if (wallet.pushTx && signed) return await wallet.pushTx(signed)
+      if (wallet.broadcast && signed) return await wallet.broadcast(signed)
+      return signed
     }
-    if (wallet.broadcast) return await wallet.broadcast({ to, calldata, value: sats })
     if (wallet.pushTx) return await wallet.pushTx({ to, calldata, value: sats })
-    if (wallet.signAndBroadcastTransaction) return await wallet.signAndBroadcastTransaction({ to, calldata, sats })
+    if (wallet.broadcast) return await wallet.broadcast({ to, calldata, value: sats })
     if (wallet.call) return await wallet.call({ to, calldata, value: sats })
     if (wallet.contractCall) return await wallet.contractCall({ to, calldata, value: sats })
     if (wallet.sendTransaction) return await wallet.sendTransaction({ to, data: calldata, value: sats.toString() })
-    if (wallet.send) return await wallet.send({ to, calldata, value: sats })
-    throw new Error('Wallet methods: ' + Object.keys(wallet).join(', '))
+    throw new Error('No compatible wallet method. Available: ' + Object.keys(wallet).join(', '))
   }
 
   const connectWallet = useCallback(async () => {
@@ -231,16 +208,19 @@ export function useYield() {
     setError(null)
     try {
       const wallet = getWallet()
-      const cd = SELECTORS.deposit +
-        vaultId.toString(16).padStart(64, '0') +
-        amountSats.toString(16).padStart(64, '0')
+
+      // Contract reads vaultId from calldata (readU8) and amount from Blockchain.tx.value
+      // So calldata = selector (4 bytes) + vaultId (1 byte, padded to 32 bytes)
+      // Amount is passed as the tx value (sats)
+      const cd = SELECTORS.deposit + vaultId.toString(16).padStart(64, '0')
+
       const result = await sendTx(wallet, contractAddress, cd, Number(amountSats))
       const txid = result?.txid || result?.txHash || result?.hash || result?.id || result?.result
       if (txid) {
         setLastTxHash(String(txid))
         showToast('Deposited! TX: ' + String(txid).slice(0, 12) + '...')
       } else {
-        showToast('Transaction sent!')
+        showToast('Deposit submitted!')
       }
       setTimeout(fetchData, 8000)
       setPositions(prev => {
@@ -260,7 +240,8 @@ export function useYield() {
       })
       setWalletBalance(b => Math.max(0, b - Number(amountSats)))
     } catch (e: any) {
-      setError(e?.message || 'Transaction failed')
+      const msg = e?.message || JSON.stringify(e) || 'Transaction failed'
+      setError(msg)
     } finally {
       setTxLoading(false)
     }
@@ -272,6 +253,7 @@ export function useYield() {
     setError(null)
     try {
       const wallet = getWallet()
+      // Contract: calldata.readU8() for vaultId, calldata.readU256() for shares
       const cd = SELECTORS.withdraw +
         vaultId.toString(16).padStart(64, '0') +
         sharesToWithdraw.toString(16).padStart(64, '0')
@@ -281,7 +263,7 @@ export function useYield() {
         setLastTxHash(String(txid))
         showToast('Withdrawal! TX: ' + String(txid).slice(0, 12) + '...')
       } else {
-        showToast('Withdrawal sent!')
+        showToast('Withdrawal submitted!')
       }
       setTimeout(fetchData, 8000)
       setPositions(prev => prev.filter(p => p.vaultId !== vaultId))
@@ -298,6 +280,7 @@ export function useYield() {
     setError(null)
     try {
       const wallet = getWallet()
+      // Contract: calldata.readU8() for vaultId only
       const cd = SELECTORS.claimYield + vaultId.toString(16).padStart(64, '0')
       const result = await sendTx(wallet, contractAddress, cd, 0)
       const txid = result?.txid || result?.txHash || result?.hash
@@ -305,7 +288,7 @@ export function useYield() {
         setLastTxHash(String(txid))
         showToast('Yield claimed! TX: ' + String(txid).slice(0, 12) + '...')
       } else {
-        showToast('Claim sent!')
+        showToast('Claim submitted!')
       }
       setPositions(prev =>
         prev.map(p => p.vaultId === vaultId ? { ...p, pendingYield: 0n } : p)
@@ -324,6 +307,7 @@ export function useYield() {
     setError(null)
     try {
       const wallet = getWallet()
+      // Contract: calldata.readU8() for vaultId only
       const cd = SELECTORS.compoundYield + vaultId.toString(16).padStart(64, '0')
       const result = await sendTx(wallet, contractAddress, cd, 0)
       const txid = result?.txid || result?.txHash || result?.hash
@@ -331,7 +315,7 @@ export function useYield() {
         setLastTxHash(String(txid))
         showToast('Compounded! TX: ' + String(txid).slice(0, 12) + '...')
       } else {
-        showToast('Compound sent!')
+        showToast('Compound submitted!')
       }
       setTimeout(fetchData, 8000)
     } catch (e: any) {
