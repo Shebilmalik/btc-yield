@@ -45,11 +45,16 @@ export function useYield() {
 
   const sendTx = async (wallet: any, params: { to: string; calldata: string; sats: number }) => {
     const { to, calldata, sats } = params
+    if (wallet.call) return await wallet.call({ to, calldata, value: sats })
+    if (wallet.contractCall) return await wallet.contractCall({ to, calldata, value: sats })
     if (wallet.sendOpNetTransaction) return await wallet.sendOpNetTransaction({ to, calldata, sats })
     if (wallet.signAndBroadcastTransaction) return await wallet.signAndBroadcastTransaction({ to, calldata, sats })
     if (wallet.sendTransaction) return await wallet.sendTransaction({ to, data: calldata, value: sats.toString() })
+    if (wallet.send) return await wallet.send({ to, calldata, value: sats })
     if (wallet.sendBitcoin) return await wallet.sendBitcoin(to, sats)
-    throw new Error('No compatible send method found in wallet')
+    if (wallet.broadcastTransaction) return await wallet.broadcastTransaction({ to, calldata, value: sats })
+    if (wallet.signTransaction) return await wallet.signTransaction({ to, calldata, value: sats })
+    throw new Error('Wallet methods: ' + Object.keys(wallet).join(', '))
   }
 
   const connectWallet = useCallback(async () => {
