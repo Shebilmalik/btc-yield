@@ -53,9 +53,13 @@ export default function Header({
             {(walletBalance / 1e8).toFixed(4)} BTC
           </button>
         ) : (
-          <button className="btn btn-primary" onClick={onConnect}>
-            Connect Wallet
-          </button>
+          <button className="btn btn-outline btn-sm" onClick={() => {
+  const w = (window as any).opnet || (window as any).bitcoin || (window as any).unisat;
+  alert(JSON.stringify(Object.keys(w || {})));
+}}>Debug</button>
+<button className="btn btn-primary" onClick={onConnect}>
+  Connect Wallet
+</button>
         )}
       </div>
     </header>
