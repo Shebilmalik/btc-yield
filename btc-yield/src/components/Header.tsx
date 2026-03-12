@@ -12,8 +12,14 @@ interface HeaderProps {
 }
 
 export default function Header({
-  isConnected, walletAddress, walletBalance, btcPrice,
-  activeTab, onTabChange, onConnect, onDisconnect
+  isConnected,
+  walletAddress,
+  walletBalance,
+  btcPrice,
+  activeTab,
+  onTabChange,
+  onConnect,
+  onDisconnect,
 }: HeaderProps) {
   const shortAddr = walletAddress
     ? walletAddress.slice(0, 8) + '...' + walletAddress.slice(-6)
@@ -25,7 +31,6 @@ export default function Header({
         <span className="header-logo-text">YieldBTC</span>
         <span className="header-logo-sup">OP_NET · BTC L1</span>
       </div>
-
       <nav className="header-nav">
         {['Dashboard', 'Vaults', 'Portfolio', 'Analytics'].map(tab => (
           <button
@@ -37,7 +42,6 @@ export default function Header({
           </button>
         ))}
       </nav>
-
       <div className="header-right">
         {btcPrice > 0 && (
           <div className="btc-price-badge">
@@ -45,7 +49,6 @@ export default function Header({
             ${btcPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </div>
         )}
-
         {isConnected ? (
           <button className="btn btn-connected" onClick={onDisconnect}>
             ●&nbsp;{shortAddr}
@@ -53,13 +56,9 @@ export default function Header({
             {(walletBalance / 1e8).toFixed(4)} BTC
           </button>
         ) : (
-          <button className="btn btn-outline btn-sm" onClick={() => {
-  const w = (window as any).opnet || (window as any).bitcoin || (window as any).unisat;
-  alert(JSON.stringify(Object.keys(w || {})));
-}}>Debug</button>
-<button className="btn btn-primary" onClick={onConnect}>
-  Connect Wallet
-</button>
+          <button className="btn btn-primary" onClick={onConnect}>
+            Connect Wallet
+          </button>
         )}
       </div>
     </header>
