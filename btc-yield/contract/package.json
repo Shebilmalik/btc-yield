@@ -1,0 +1,11 @@
+{
+  "name": "btc-yield-contract",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "asc src/index.ts --target release -o build/contract.wasm --disable bulk-memory",
+    "deploy": "node scripts/deploy.js"
+  },
+  "devDependencies": {
+    "assemblyscript": "^0.27.0"
+  }
+}
