@@ -44,10 +44,21 @@ export function useYield() {
     (window as any).unisat
 
   const sendTx = async (wallet: any, to: string, calldata: string, sats: number) => {
+    // OP_NET primary — signAndBroadcastInteraction
+    if (wallet.signAndBroadcastInteraction) {
+      return await wallet.signAndBroadcastInteraction({
+        to,
+        calldata,
+        value: BigInt(sats),
+      })
+    }
+    // OP_NET fallbacks
+    if (wallet.broadcast) return await wallet.broadcast({ to, calldata, value: sats })
+    if (wallet.pushTx) return await wallet.pushTx({ to, calldata, value: sats })
+    if (wallet.signAndBroadcastTransaction) return await wallet.signAndBroadcastTransaction({ to, calldata, sats })
     if (wallet.call) return await wallet.call({ to, calldata, value: sats })
     if (wallet.contractCall) return await wallet.contractCall({ to, calldata, value: sats })
     if (wallet.sendOpNetTransaction) return await wallet.sendOpNetTransaction({ to, calldata, sats })
-    if (wallet.signAndBroadcastTransaction) return await wallet.signAndBroadcastTransaction({ to, calldata, sats })
     if (wallet.sendTransaction) return await wallet.sendTransaction({ to, data: calldata, value: sats.toString() })
     if (wallet.send) return await wallet.send({ to, calldata, value: sats })
     if (wallet.broadcastTransaction) return await wallet.broadcastTransaction({ to, calldata, value: sats })
@@ -199,10 +210,10 @@ export function useYield() {
         vaultId.toString(16).padStart(64, '0') +
         amountSats.toString(16).padStart(64, '0')
       const result = await sendTx(wallet, contractAddress, cd, Number(amountSats))
-      const txid = result?.txid || result?.txHash || result?.hash || result?.id
+      const txid = result?.txid || result?.txHash || result?.hash || result?.id || result?.result
       if (txid) {
-        setLastTxHash(txid)
-        showToast('Deposited! TX: ' + txid.slice(0, 12) + '...')
+        setLastTxHash(String(txid))
+        showToast('Deposited! TX: ' + String(txid).slice(0, 12) + '...')
       } else {
         showToast('Transaction sent!')
       }
@@ -242,8 +253,8 @@ export function useYield() {
       const result = await sendTx(wallet, contractAddress, cd, 0)
       const txid = result?.txid || result?.txHash || result?.hash
       if (txid) {
-        setLastTxHash(txid)
-        showToast('Withdrawal! TX: ' + txid.slice(0, 12) + '...')
+        setLastTxHash(String(txid))
+        showToast('Withdrawal! TX: ' + String(txid).slice(0, 12) + '...')
       } else {
         showToast('Withdrawal sent!')
       }
@@ -266,8 +277,8 @@ export function useYield() {
       const result = await sendTx(wallet, contractAddress, cd, 0)
       const txid = result?.txid || result?.txHash || result?.hash
       if (txid) {
-        setLastTxHash(txid)
-        showToast('Yield claimed! TX: ' + txid.slice(0, 12) + '...')
+        setLastTxHash(String(txid))
+        showToast('Yield claimed! TX: ' + String(txid).slice(0, 12) + '...')
       } else {
         showToast('Claim sent!')
       }
@@ -292,8 +303,8 @@ export function useYield() {
       const result = await sendTx(wallet, contractAddress, cd, 0)
       const txid = result?.txid || result?.txHash || result?.hash
       if (txid) {
-        setLastTxHash(txid)
-        showToast('Compounded! TX: ' + txid.slice(0, 12) + '...')
+        setLastTxHash(String(txid))
+        showToast('Compounded! TX: ' + String(txid).slice(0, 12) + '...')
       } else {
         showToast('Compound sent!')
       }
